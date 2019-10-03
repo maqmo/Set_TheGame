@@ -10,26 +10,24 @@ import UIKit
 
 class ViewController: UIViewController {
     var game :Set_TheGame = Set_TheGame()
-    var cardLookUp = Dictionary<UIButton, Int>()
+    var buttonToCardMap = Dictionary<UIButton, Card>()
     override func viewWillAppear(_ animated: Bool) {
-        //before showing the view, deal and display the dealt card's details on the buttons
+        //before showing the view, deal and display the model's dealt card's details on the buttons
         super.viewWillAppear(animated)
         game.deal(NumberofCards: 24)
-        updateViewBasedOnModel()
-    }
-    var highlightedCards = [UIButton](){
-        didSet{
-            highlightCards()
+        var newCards = game.cardsInPlay
+        for button in cardUIButtons{
+            let newCard = newCards.popLast()!
+            buttonToCardMap[button] = newCard
+            renderCardDetails(basedOn: newCard, withButton: button)
         }
+        game.cardsInPlay = newCards
     }
-    var selectedCards :[Card] = [Card]() {
+    var selectedButtons :[UIButton] = [UIButton]() {
         didSet{
-            if selectedCards.count == 3 {
-                if highlightedCards.count == 3{
-                    inspectSet()
-                }else{
-                    //unhighlight the cards,
-                }
+            assert(selectedButtons.count < 4)
+            if selectedButtons.count == 3 {
+                inspectSet()
             }
         }
     }
@@ -41,9 +39,23 @@ class ViewController: UIViewController {
     
     func inspectSet(){
         /*
-         if set found: update 3. only deal 3 more if the user asks for it
-         if no set found
+         if set found, hide the buttons, increment score, turn off highlight, set card to matched, break button to card mapping
          */
+        assert(selectedButtons.count == 3)
+        if setFound(){
+            score += 1
+            for button in selectedButtons{
+                button.toggleHighlight()
+                button.isHidden = true
+                buttonToCardMap[button]!.matched = true
+                buttonToCardMap[button] = nil
+            }
+        }else{
+            score -= 1
+            for button in selectedButtons{
+                button.toggleHighlight()
+            }
+        }
     }
     func renderCardDetails(basedOn card:Card, withButton btn:UIButton) {
         var shape :String
@@ -80,8 +92,9 @@ class ViewController: UIViewController {
     //redraw the cards on the screen based on the model's cardsDealt array where each card is not matched
     func setFound() -> Bool{
         //tally up the features for each card in 'selected'
+        let cards :[Card] = selectedButtons.map{buttonToCardMap[$0]!}
         var featureTally = [Set<String>(), Set<String>(), Set<String>(), Set<String>()]
-        for card in selectedCards{
+        for card in cards{
             featureTally[0].insert(card.color.rawValue)
             featureTally[1].insert(card.shape.rawValue)
             featureTally[2].insert(card.outline.rawValue)
@@ -98,65 +111,35 @@ class ViewController: UIViewController {
         return true
     }
     
-    func updateViewBasedOnModel(){
-        for index in 0...cardUIButtons!.count - 1 {
-            let modelCard = game.cardsInPlay[index]
-            let uiCard = cardUIButtons[index]
-            cardLookUp[uiCard] = modelCard.id
-            renderCardDetails(basedOn:modelCard, withButton: uiCard )
-        }
+    func updateViewFromModel(){
+        
     }
     
-    func highlightCards(){
-        /*
-            for card in highlightedCards{
-            let cardIndex = cardUIButtons.firstindex(card)
-            modify the look of cardUIButtons[cardIndex] to become highlighted
-         }
-         */
-    }
     @IBOutlet weak var scoreLabel: UILabel!
-    @IBOutlet var cardUIButtons: [UIButton]!;
+    @IBOutlet var cardUIButtons: [UIButton]!
     @IBAction func render3MoreCards(_ sender: Any) {
         //if clicked deal 3 more cards, rerender
     }
     @IBAction func selectCard(_ sender: UIButton) {
-        //change the view of the card, highlight
-        let cardId = cardLookUp[sender]!
-        let modelCard = game.cardsInPlay.filter{$0.id == cardId}
-        assert(modelCard.count == 1)
-        selectedCards.append(modelCard[0])
+        selectedButtons.append(sender)
     }
 }
 
+extension UIButton{
+    func toggleHighlight(){
+        let color = self.isHighlighted ? UIColor.clear.cgColor: UIColor.systemYellow.cgColor
+        let width = self.isHighlighted ? 0 : 10
+        self.isHighlighted = !self.isHighlighted
+        self.layer.borderWidth = CGFloat(width)
+        self.layer.borderColor = color
+    }
+}
 
 /*
- 
- before a new game can be selected:
-    set all the cards (24) from the deck of 81
-    show 12/24
-        how to temporarily hide a card?
-    set the deal button to only deal when:
-        cards in play are < 24
- 
- new game
- 
- click a cardUIButton
-    
-    view:
-        that card now highlighted as a selection
-    model:
-        see which card was clicked
-        add to selected array, or see if set found
-    
-    
- 
- 
  TODO:
     fix shading option ??
     fix layout [close, just dive into it
     fix deal 3 more logic + ui
-    implement 'selection' highlighting
     implement ability to show up to 81 cards (layout / view issue)
  */
 

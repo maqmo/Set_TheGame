@@ -15,6 +15,9 @@ struct Set_TheGame{
         get{
             return dealtCards.filter{!$0.matched}
         }
+        set{
+            dealtCards = newValue
+        }
     }
     init(){
         cardSet = makeDeck()
@@ -24,7 +27,11 @@ struct Set_TheGame{
         assert(cardSet.count >= num)
         var cards = [Card]()
         for _ in 1...num{
-            cards.append((cardSet.popFirst()!))
+            if let newCard = cardSet.popFirst(){
+                cards.append(newCard)
+            }else{
+                cards = []
+            }
         }
         dealtCards += cards
     }
