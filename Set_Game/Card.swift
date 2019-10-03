@@ -8,7 +8,7 @@
 
 import Foundation
 
-class Card :Hashable{
+struct Card :Hashable{
     var id :Int
     var matched :Bool
     var color :Set_TheGame.Color

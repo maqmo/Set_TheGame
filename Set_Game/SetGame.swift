@@ -10,40 +10,23 @@ import Foundation
 
 struct Set_TheGame{
     private var cardSet = Set<Card>()
-    private(set) var dealtCards = [Card]()
+    private var dealtCards = [Card]()
+    var cardsInPlay :[Card]{
+        get{
+            return dealtCards.filter{!$0.matched}
+        }
+    }
     init(){
         cardSet = makeDeck()
         assert(cardSet.count >= 81)
     }
-    mutating func deal(NumberofCards num:Int) -> [Card]?{
-        guard cardSet.count > num else{
-            return nil
-        }
+    mutating func deal(NumberofCards num:Int){
+        assert(cardSet.count >= num)
         var cards = [Card]()
         for _ in 1...num{
             cards.append((cardSet.popFirst()!))
         }
         dealtCards += cards
-        return cards
-    }
-    func determineIfSetFound(withCards chosenCards:[Card]) -> Bool{
-        assert(chosenCards.count == 3)
-        
-        var featureTally = [Set<String>(), Set<String>(), Set<String>(), Set<String>()]
-        for card in chosenCards{
-            featureTally[0].insert(card.color.rawValue)
-            featureTally[1].insert(card.shape.rawValue)
-            featureTally[2].insert(card.outline.rawValue)
-            featureTally[3].insert(card.count.rawValue)
-        }
-        for feature in featureTally {
-            let countedFeatures = feature.count
-            assert(countedFeatures < 4)
-            if (countedFeatures == 2) {// either will be (1,2 or 3)
-                return false
-            }
-        }
-        return true
     }
     func makeDeck() -> Set<Card>{
         var deck = Set<Card>()
@@ -68,7 +51,7 @@ struct Set_TheGame{
        public enum Outline: String,CaseIterable {
            case solid, striped, squiggle
        }
-       public enum Count: String,CaseIterable {
+       public enum Count: String ,CaseIterable {
            case one, two, three
        }
 }
