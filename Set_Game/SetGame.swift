@@ -15,25 +15,26 @@ struct Set_TheGame{
         get{
             return dealtCards.filter{!$0.matched}
         }
-        set{
-            dealtCards = newValue
-        }
     }
     init(){
         cardSet = makeDeck()
-        assert(cardSet.count >= 81)
     }
-    mutating func deal(NumberofCards num:Int){
+    
+    mutating func deal(numberOfCards num:Int) -> [Card]?{
         assert(cardSet.count >= num)
         var cards = [Card]()
         for _ in 1...num{
-            if let newCard = cardSet.popFirst(){
+            if let newCard = cardSet.randomElement(){
                 cards.append(newCard)
             }else{
                 cards = []
             }
         }
-        dealtCards += cards
+         dealtCards += cards
+        if cards.count == 0{
+            return nil
+        }
+        return cards
     }
     func makeDeck() -> Set<Card>{
         var deck = Set<Card>()
@@ -46,9 +47,29 @@ struct Set_TheGame{
                 }
             }
         }
-        assert(deck.count >= 81)
         return deck
     }
+    
+    func setFound(withTrio cards: [Card]) -> Bool{
+           //tally up the features for each card in 'selected'
+           var featureTally = [Set<String>(), Set<String>(), Set<String>(), Set<String>()]
+           for card in cards{
+            featureTally[0].insert(card.color.rawValue)
+               featureTally[1].insert(card.shape.rawValue)
+               featureTally[2].insert(card.outline.rawValue)
+               featureTally[3].insert(card.count.rawValue)
+           }
+           for feature in featureTally {
+               let countedFeatures = feature.count
+               assert(countedFeatures < 4)
+               if (countedFeatures == 2) {
+                   //if found 1 or 3 of any feature for each card, thats a winning set, finding 2 means the set is invalid
+                   return false
+               }
+           }
+           return true
+       }
+
     public enum Shape: String, CaseIterable {
            case circle, square, triangle
        }

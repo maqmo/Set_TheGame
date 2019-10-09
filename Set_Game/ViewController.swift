@@ -14,48 +14,51 @@ class ViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         //before showing the view, deal and display the model's dealt card's details on the buttons
         super.viewWillAppear(animated)
-        game.deal(NumberofCards: 24)
-        var newCards = game.cardsInPlay
-        for button in cardUIButtons{
-            let newCard = newCards.popLast()!
-            buttonToCardMap[button] = newCard
-            renderCardDetails(basedOn: newCard, withButton: button)
-        }
-        game.cardsInPlay = newCards
+        cardUIButtons.forEach{$0.isHidden = true}
+        let newCards = game.deal(numberOfCards: 12)
+        updateViewFromModel(withCards: newCards!)
     }
-    var selectedButtons :[UIButton] = [UIButton]() {
+    var selectedButtons :Set<UIButton> = Set<UIButton>() {
         didSet{
-            assert(selectedButtons.count < 4)
             if selectedButtons.count == 3 {
-                inspectSet()
+                handleTrio()
             }
         }
     }
+    
     var score :Int = 0 {
         didSet{
-            //notify the view that the score changed
+            if score < 0 {
+                score += 1
+            }
+            scoreLabel.text = "Score : \(score)"
         }
     }
     
-    func inspectSet(){
-        /*
-         if set found, hide the buttons, increment score, turn off highlight, set card to matched, break button to card mapping
-         */
+    func handleTrio(){
         assert(selectedButtons.count == 3)
-        if setFound(){
+        //get the corresponding cards for the selected buttons using our dict (map to arr and pass to game method)
+        let cards :[Card] = selectedButtons.map{buttonToCardMap[$0]!}
+        if game.setFound(withTrio: cards){
             score += 1
             for button in selectedButtons{
-                button.toggleHighlight()
+//                button.toggleHighlight()
+                button.unHighlight()
                 button.isHidden = true
                 buttonToCardMap[button]!.matched = true
                 buttonToCardMap[button] = nil
             }
+            dealButton.isHidden = false
         }else{
             score -= 1
-            for button in selectedButtons{
-                button.toggleHighlight()
-            }
         }
+    }
+    
+    func resetSelected(){
+        for button in selectedButtons{
+            button.unHighlight()
+        }
+        selectedButtons.removeAll()
     }
     func renderCardDetails(basedOn card:Card, withButton btn:UIButton) {
         var shape :String
@@ -80,58 +83,72 @@ class ViewController: UIViewController {
         }
         
         //make the attributed string
-        //btn.setTitle(shape, for: UIControl.State.normal)
         let attrs: [NSAttributedString.Key:Any] = [.strokeWidth: 12.0, .strokeColor:color]
         //now create the NSAttrString object and give it the attr var as a param
         let attributedString = NSAttributedString(string: shape, attributes: attrs)
         //now assign the last let-var to the attrText property of our UI Button
         btn.setAttributedTitle(attributedString, for: UIControl.State.normal)
-        
+        btn.isHidden = false;
         }
     
-    //redraw the cards on the screen based on the model's cardsDealt array where each card is not matched
-    func setFound() -> Bool{
-        //tally up the features for each card in 'selected'
-        let cards :[Card] = selectedButtons.map{buttonToCardMap[$0]!}
-        var featureTally = [Set<String>(), Set<String>(), Set<String>(), Set<String>()]
-        for card in cards{
-            featureTally[0].insert(card.color.rawValue)
-            featureTally[1].insert(card.shape.rawValue)
-            featureTally[2].insert(card.outline.rawValue)
-            featureTally[3].insert(card.count.rawValue)
-        }
-        for feature in featureTally {
-            let countedFeatures = feature.count
-            assert(countedFeatures < 4)
-            if (countedFeatures == 2) {
-                //if found 1 or 3 of any feature for each card, thats a winning set, finding 2 means the set is invalid
-                return false
+    func updateViewFromModel(withCards newCards:[Card]) {
+        var index = newCards.makeIterator()
+        for button in cardUIButtons {
+            if buttonToCardMap[button] == nil, let newCard = index.next() {
+                buttonToCardMap[button] = newCard
+                renderCardDetails(basedOn: newCard, withButton: button)
             }
         }
-        return true
-    }
-    
-    func updateViewFromModel(){
-        
     }
     
     @IBOutlet weak var scoreLabel: UILabel!
-    @IBOutlet var cardUIButtons: [UIButton]!
-    @IBAction func render3MoreCards(_ sender: Any) {
-        //if clicked deal 3 more cards, rerender
+    @IBOutlet var cardUIButtons: [UIButton] = []
+    @IBOutlet weak var dealButton: UIButton!
+    @IBAction func deal3(_ sender: UIButton) {
+        if let newCards = game.deal(numberOfCards: 3) {
+            updateViewFromModel(withCards: newCards)
+        }else {
+            sender.isHidden = true;
+        }
     }
     @IBAction func selectCard(_ sender: UIButton) {
-        selectedButtons.append(sender)
+        //if button has been clicked before,
+        if selectedButtons.count == 3 {
+            resetSelected()
+        }
+        if selectedButtons.contains(sender), buttonToCardMap[sender]!.matched == false {
+            sender.unHighlight()
+            selectedButtons.remove(sender)
+        }else {
+            sender.highlight()
+            selectedButtons.insert(sender)
+        }
     }
 }
+//extension UIButton {
+//    var isYellow :Bool {
+//        return (self.layer.borderColor == UIColor.yellow.cgColor)
+//    }
+//}
+//extension UIButton{
+//    func toggleHighlight(){
+//        let color = self.isYellow ? UIColor.clear.cgColor: UIColor.yellow.cgColor
+//        let width = self.isHighlighted ? 0 : 10
+//        self.layer.borderWidth = CGFloat(width)
+//        self.layer.borderColor = color
+//    }
+//}
 
-extension UIButton{
-    func toggleHighlight(){
-        let color = self.isHighlighted ? UIColor.clear.cgColor: UIColor.systemYellow.cgColor
-        let width = self.isHighlighted ? 0 : 10
-        self.isHighlighted = !self.isHighlighted
-        self.layer.borderWidth = CGFloat(width)
-        self.layer.borderColor = color
+extension UIButton {
+    func highlight() {
+        self.layer.borderWidth = CGFloat(8)
+        self.layer.borderColor = UIColor.yellow.cgColor
+        self.backgroundColor = UIColor.black
+    }
+    func unHighlight() {
+        self.layer.borderWidth = CGFloat(0)
+        self.layer.borderColor = UIColor.clear.cgColor
+        self.backgroundColor = UIColor.white
     }
 }
 
